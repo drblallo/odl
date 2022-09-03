@@ -1,10 +1,7 @@
-#![feature(proc_macro_hygiene)]
-extern crate plex;
-
-use odl::lexer::IndentLexer;
-use std::io::Read;
-
 fn main() {
+    use odl::lexer::IndentLexer;
+    use std::io::Read;
+
     let mut s = String::new();
     std::io::stdin().read_to_string(&mut s).unwrap();
     let lexer = IndentLexer::new(&s);

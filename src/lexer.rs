@@ -1,8 +1,7 @@
-use crate::error::IndentationMissMatchError;
+use crate::error::ParserError;
 use crate::token::Token;
 use crate::token::TokenKind;
 use plex::lexer;
-use std::error::Error;
 
 lexer! {
     fn next_token(text: 'a) -> TokenKind;
@@ -127,21 +126,24 @@ impl<'a> IndentLexer<'a> {
         return to_return;
     }
 
-    fn next_with_whitespace(&mut self) -> Result<Option<Token>, Box<dyn Error>> {
+    fn next_with_whitespace(&mut self) -> Result<Token, ParserError> {
         if let Err(error) = self.handle_indent() {
             self.advance_impl();
             return Err(error);
         }
         if let Some(token) = self.deindent_to_emit.pop() {
-            return Ok(Some(token));
+            return Ok(token);
         }
 
         let to_return = self.current_token.clone();
         self.advance_impl();
-        return Ok(to_return);
+        return match to_return {
+            Some(value) => Ok(value),
+            None => Err(ParserError::new_end_of_token_stream()),
+        };
     }
 
-    pub fn handle_indent(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn handle_indent(&mut self) -> Result<(), ParserError> {
         if !self.start_of_line || self.current_token.is_none() {
             return Ok(());
         }
@@ -169,11 +171,11 @@ impl<'a> IndentLexer<'a> {
         loop {
             let indent = self.indentation_stack.pop().unwrap_or(zero);
             if indent < current_white_space {
-                return Err(Box::new(IndentationMissMatchError {
-                    span: span.clone(),
-                    expected: indent,
-                    actual: current_white_space,
-                }));
+                return Err(ParserError::new_indentation_miss_match(
+                    span.clone(),
+                    indent,
+                    current_white_space,
+                ));
             } else if indent == current_white_space {
                 self.indentation_stack.push(current_white_space);
                 return Ok(());
@@ -188,40 +190,46 @@ impl<'a> IndentLexer<'a> {
             self.start_of_line = false;
         }
     }
-}
 
-impl<'a> Iterator for IndentLexer<'a> {
-    type Item = Result<Token, Box<dyn Error>>;
-
-    fn next(&mut self) -> Option<Result<Token, Box<dyn Error>>> {
+    pub fn next_token(&mut self) -> Result<Token, ParserError> {
         loop {
-            let maybe_token = self.next_with_whitespace();
-            if let Err(error) = maybe_token {
-                return Some(Err(error));
-            }
-
-            let token = maybe_token.unwrap();
-            if token.as_ref().map_or(false, |x| x.is_whitespace()) {
+            let token = self.next_with_whitespace()?;
+            if token.is_whitespace() {
                 continue;
             }
 
-            return match token {
-                Some(content) => Some(Ok(content)),
-                None => None,
-            };
+            return Ok(token);
         }
+    }
+}
+
+impl<'a> Iterator for IndentLexer<'a> {
+    type Item = Result<Token, ParserError>;
+
+    fn next(&mut self) -> Option<Result<Token, ParserError>> {
+        let token = self.next_token();
+        match token {
+            Ok(token) => return Some(Ok(token)),
+            Err(content) => {
+                if content.is_end_of_token_stream() {
+                    return None;
+                } else {
+                    return Some(Err(content));
+                }
+            }
+        };
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::error::ParserError;
     use crate::lexer::IndentLexer;
     use crate::token::Span;
     use crate::token::Token;
     use crate::token::TokenKind;
-    use std::error::Error;
 
-    fn token_kind(option: &Option<Result<Token, Box<dyn Error>>>) -> TokenKind {
+    fn token_kind(option: &Option<Result<Token, ParserError>>) -> TokenKind {
         assert!(option.is_some());
         let maybe_error = option.as_ref().unwrap();
         assert!(maybe_error.is_ok());
@@ -229,7 +237,7 @@ mod tests {
         return token.kind.clone();
     }
 
-    fn token_span(option: &Option<Result<Token, Box<dyn Error>>>) -> Span {
+    fn token_span(option: &Option<Result<Token, ParserError>>) -> Span {
         assert!(option.is_some());
         let maybe_error = option.as_ref().unwrap();
         assert!(maybe_error.is_ok());
