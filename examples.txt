@@ -1,0 +1,53 @@
+constant marine profile
+	WS = 4
+	AB = 4
+
+constant sergent profile
+	WS = 4
+	AB = 5
+
+alternative heavy weapon
+	heavy bolter
+
+entry tactical squad
+	5-10 tactical marines
+		profile = marine profile
+	0-1 sergent
+		profile = sergent profile
+
+	0-1 heavy weapons = []
+
+	require
+		count(tactical marines) + count(sergent) <= 10
+		"squad cannot have more than 10 models"
+
+
+#real list
+1 tactical squad
+	9 tactical marines
+	1 sergent
+
+	heavy weapons = [
+		heavy bolter
+	]
+
+
+grammar:
+
+document: (selection | typeSystemDeclaration)*
+
+typeSystemDeclaration: (constant | alternative | option | requirement | Endline)
+
+constantDeclaration: "constant" constant
+
+constant: Identifier (Equal initializer Endline | Endline constantBody)
+
+constantBody: Indent (constant)+ Deindent
+
+alternativeDeclaration: "alternative" Identifier EndLine (Identifier EndLine)* Deindent
+
+entryDeclaration: "entry" identifier Endline Indent (entryField)+ Deindent
+
+entryField: arraySizeBounds? Identifier (Equal initializer Endline) EndLine
+
+
