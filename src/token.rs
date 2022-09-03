@@ -76,4 +76,24 @@ impl Token {
         }
         return None;
     }
+
+    pub fn get_identifier(&self) -> Option<String> {
+        match self.kind.clone() {
+            TokenKind::Ident(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn get_float(&self) -> Option<i64> {
+        match self.kind {
+            _ => None,
+        }
+    }
+
+    pub fn get_int(&self) -> Option<i64> {
+        match self.kind {
+            TokenKind::Integer(a) => return Some(a),
+            _ => None,
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use crate::token::Span;
+use crate::token::*;
 use core::fmt::Display;
 use std::error::Error;
 
@@ -37,12 +37,34 @@ impl Error for EndOfTokenStreamError {
 }
 
 #[derive(Debug, Clone)]
+pub struct UnexpectedTokenError {
+    token: Token,
+}
+
+impl Display for UnexpectedTokenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+        return write!(f, "{}", self);
+    }
+}
+
+impl Error for UnexpectedTokenError {
+    fn description(&self) -> &str {
+        return "unexpected token";
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum ParserError {
     EndOfTokenStream(EndOfTokenStreamError),
     Indentation(IndentationError),
+    UnexpectedToken(UnexpectedTokenError),
 }
 
 impl ParserError {
+    pub fn new_unexpected_token(token: Token) -> ParserError {
+        return ParserError::UnexpectedToken(UnexpectedTokenError { token });
+    }
+
     pub fn new_end_of_token_stream() -> ParserError {
         return ParserError::EndOfTokenStream(EndOfTokenStreamError {});
     }
@@ -59,6 +81,10 @@ impl ParserError {
         return matches!(self, ParserError::Indentation(_));
     }
 
+    pub fn is_unexpected_token_error(&self) -> bool {
+        return matches!(self, ParserError::UnexpectedToken(_));
+    }
+
     pub fn is_end_of_token_stream(&self) -> bool {
         return matches!(self, ParserError::EndOfTokenStream(_));
     }
@@ -66,6 +92,13 @@ impl ParserError {
     pub fn get_indentation_error(&self) -> Option<&IndentationError> {
         return match self {
             ParserError::Indentation(error) => Some(error),
+            _ => None,
+        };
+    }
+
+    pub fn get_unexpected_token(&self) -> Option<&UnexpectedTokenError> {
+        return match self {
+            ParserError::UnexpectedToken(error) => Some(error),
             _ => None,
         };
     }
@@ -83,6 +116,7 @@ impl Display for ParserError {
         return match self {
             ParserError::EndOfTokenStream(content) => content.fmt(f),
             ParserError::Indentation(content) => content.fmt(f),
+            ParserError::UnexpectedToken(content) => content.fmt(f),
         };
     }
 }
@@ -92,6 +126,7 @@ impl Error for ParserError {
         return match self {
             ParserError::EndOfTokenStream(content) => content.description(),
             ParserError::Indentation(content) => content.description(),
+            ParserError::UnexpectedToken(content) => content.description(),
         };
     }
 }
