@@ -42,170 +42,327 @@ pub enum UnaryExpressionKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
+pub enum ExpressionEnum {
     Lit(Literal),
     Una(UnaryExpressionKind, Box<Expression>),
     Bin(BinaryExpressionKind, Box<Expression>, Box<Expression>),
 }
 
-impl Expression {
-    pub fn new_bin(kind: BinaryExpressionKind, lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(kind, Box::new(lhs), Box::new(rhs));
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expression {
+    content: ExpressionEnum,
+    span: Span,
+}
+
+impl ExpressionEnum {
+    pub fn new_bin(kind: BinaryExpressionKind, lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(kind, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn add(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Add, Box::new(lhs), Box::new(rhs));
+    pub fn add(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Add, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn sub(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Sub, Box::new(lhs), Box::new(rhs));
+    pub fn sub(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Sub, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn mult(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Mult, Box::new(lhs), Box::new(rhs));
+    pub fn mult(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Mult, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn div(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Div, Box::new(lhs), Box::new(rhs));
+    pub fn div(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Div, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn or(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Or, Box::new(lhs), Box::new(rhs));
+    pub fn or(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Or, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn and(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::And, Box::new(lhs), Box::new(rhs));
+    pub fn and(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::And, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn equal(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Equal, Box::new(lhs), Box::new(rhs));
+    pub fn equal(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Equal, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn different(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Equal, Box::new(lhs), Box::new(rhs));
+    pub fn different(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Equal, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn less(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Less, Box::new(lhs), Box::new(rhs));
+    pub fn less(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Less, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn ident(lhs: String) -> Expression {
-        return Expression::Lit(Literal::Indent(lhs.to_string()));
+    pub fn ident(lhs: String) -> ExpressionEnum {
+        return ExpressionEnum::Lit(Literal::Indent(lhs.to_string()));
     }
 
-    pub fn less_equal(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(
+    pub fn less_equal(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(
             BinaryExpressionKind::LessEqual,
             Box::new(lhs),
             Box::new(rhs),
         );
     }
 
-    pub fn greater(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(BinaryExpressionKind::Greater, Box::new(lhs), Box::new(rhs));
+    pub fn greater(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(BinaryExpressionKind::Greater, Box::new(lhs), Box::new(rhs));
     }
 
-    pub fn greater_equal(lhs: Expression, rhs: Expression) -> Expression {
-        return Expression::Bin(
+    pub fn greater_equal(lhs: Expression, rhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Bin(
             BinaryExpressionKind::GreaterEqual,
             Box::new(lhs),
             Box::new(rhs),
         );
     }
 
-    pub fn new_una(kind: UnaryExpressionKind, lhs: Expression) -> Expression {
-        return Expression::Una(kind, Box::new(lhs));
+    pub fn new_una(kind: UnaryExpressionKind, lhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Una(kind, Box::new(lhs));
     }
 
-    pub fn not(lhs: Expression) -> Expression {
-        return Expression::Una(UnaryExpressionKind::Not, Box::new(lhs));
+    pub fn not(lhs: Expression) -> ExpressionEnum {
+        return ExpressionEnum::Una(UnaryExpressionKind::Not, Box::new(lhs));
     }
 
-    pub fn new_lit(lit: Literal) -> Expression {
-        return Expression::Lit(lit);
+    pub fn new_lit(lit: Literal) -> ExpressionEnum {
+        return ExpressionEnum::Lit(lit);
     }
 
-    pub fn str(s: String) -> Expression {
-        return Expression::Lit(Literal::Str(s));
+    pub fn str(s: String) -> ExpressionEnum {
+        return ExpressionEnum::Lit(Literal::Str(s));
     }
 
-    pub fn int(i: i64) -> Expression {
-        return Expression::Lit(Literal::Integer(i));
+    pub fn int(i: i64) -> ExpressionEnum {
+        return ExpressionEnum::Lit(Literal::Integer(i));
     }
 
-    pub fn float(f: f64) -> Expression {
-        return Expression::Lit(Literal::Float(f));
+    pub fn float(f: f64) -> ExpressionEnum {
+        return ExpressionEnum::Lit(Literal::Float(f));
     }
 
     pub fn arity(&self) -> usize {
         return match self {
-            Expression::Lit(_) => 0,
-            Expression::Una(_, _) => 1,
-            Expression::Bin(_, _, _) => 2,
+            ExpressionEnum::Lit(_) => 0,
+            ExpressionEnum::Una(_, _) => 1,
+            ExpressionEnum::Bin(_, _, _) => 2,
         };
     }
 
     pub fn is_literal(&self) -> bool {
         return match self {
-            Expression::Lit(_) => true,
-            Expression::Una(_, _) => false,
-            Expression::Bin(_, _, _) => false,
+            ExpressionEnum::Lit(_) => true,
+            ExpressionEnum::Una(_, _) => false,
+            ExpressionEnum::Bin(_, _, _) => false,
         };
     }
 
     pub fn is_unary(&self) -> bool {
         return match self {
-            Expression::Lit(_) => false,
-            Expression::Una(_, _) => true,
-            Expression::Bin(_, _, _) => false,
+            ExpressionEnum::Lit(_) => false,
+            ExpressionEnum::Una(_, _) => true,
+            ExpressionEnum::Bin(_, _, _) => false,
         };
     }
 
     pub fn is_binary(&self) -> bool {
         return match self {
-            Expression::Lit(_) => false,
-            Expression::Una(_, _) => false,
-            Expression::Bin(_, _, _) => true,
+            ExpressionEnum::Lit(_) => false,
+            ExpressionEnum::Una(_, _) => false,
+            ExpressionEnum::Bin(_, _, _) => true,
         };
     }
 
     pub fn left(&self) -> Option<&Expression> {
         return match self {
-            Expression::Lit(_) => None,
-            Expression::Una(_, left) => Some(left),
-            Expression::Bin(_, left, _) => Some(left),
+            ExpressionEnum::Lit(_) => None,
+            ExpressionEnum::Una(_, left) => Some(left),
+            ExpressionEnum::Bin(_, left, _) => Some(left),
         };
     }
 
     pub fn right(&self) -> Option<&Expression> {
         return match self {
-            Expression::Lit(_) => None,
-            Expression::Una(_, _) => None,
-            Expression::Bin(_, _, right) => Some(right),
+            ExpressionEnum::Lit(_) => None,
+            ExpressionEnum::Una(_, _) => None,
+            ExpressionEnum::Bin(_, _, right) => Some(right),
         };
     }
 
     pub fn literal(&self) -> Option<&Literal> {
         return match self {
-            Expression::Lit(lit) => Some(lit),
-            Expression::Una(_, _) => None,
-            Expression::Bin(_, _, _) => None,
+            ExpressionEnum::Lit(lit) => Some(lit),
+            ExpressionEnum::Una(_, _) => None,
+            ExpressionEnum::Bin(_, _, _) => None,
         };
     }
 
     pub fn binary_kind(&self) -> Option<&BinaryExpressionKind> {
         return match self {
-            Expression::Lit(_) => None,
-            Expression::Una(_, _) => None,
-            Expression::Bin(kind, _, _) => Some(kind),
+            ExpressionEnum::Lit(_) => None,
+            ExpressionEnum::Una(_, _) => None,
+            ExpressionEnum::Bin(kind, _, _) => Some(kind),
         };
     }
 
     pub fn unary_kind(&self) -> Option<&UnaryExpressionKind> {
         return match self {
-            Expression::Lit(_) => None,
-            Expression::Una(kind, _) => Some(kind),
-            Expression::Bin(_, _, _) => None,
+            ExpressionEnum::Lit(_) => None,
+            ExpressionEnum::Una(kind, _) => Some(kind),
+            ExpressionEnum::Bin(_, _, _) => None,
         };
+    }
+}
+
+impl Expression {
+    pub fn new_bin(
+        kind: BinaryExpressionKind,
+        lhs: Expression,
+        rhs: Expression,
+        span: Span,
+    ) -> Expression {
+        let content = ExpressionEnum::new_bin(kind, lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn add(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::add(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn sub(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::sub(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn mult(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::mult(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn div(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::div(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn or(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::or(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn and(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::and(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn equal(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::equal(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn different(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::different(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn less(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::less(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn ident(lhs: String, span: Span) -> Expression {
+        let content = ExpressionEnum::ident(lhs.to_string());
+        return Expression { content, span };
+    }
+
+    pub fn less_equal(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::less_equal(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn greater(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::greater(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn greater_equal(lhs: Expression, rhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::greater_equal(lhs, rhs);
+        return Expression { content, span };
+    }
+
+    pub fn new_una(kind: UnaryExpressionKind, lhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::new_una(kind, lhs);
+        return Expression { content, span };
+    }
+
+    pub fn not(lhs: Expression, span: Span) -> Expression {
+        let content = ExpressionEnum::not(lhs);
+        return Expression { content, span };
+    }
+
+    pub fn new_lit(lit: Literal, span: Span) -> Expression {
+        let content = ExpressionEnum::new_lit(lit);
+        return Expression { content, span };
+    }
+
+    pub fn str(s: String, span: Span) -> Expression {
+        let content = ExpressionEnum::str(s);
+        return Expression { content, span };
+    }
+
+    pub fn int(i: i64, span: Span) -> Expression {
+        let content = ExpressionEnum::int(i);
+        return Expression { content, span };
+    }
+
+    pub fn float(f: f64, span: Span) -> Expression {
+        let content = ExpressionEnum::float(f);
+        return Expression { content, span };
+    }
+
+    pub fn arity(&self) -> usize {
+        return self.content.arity();
+    }
+
+    pub fn is_literal(&self) -> bool {
+        return self.content.is_literal();
+    }
+
+    pub fn is_unary(&self) -> bool {
+        return self.content.is_unary();
+    }
+
+    pub fn is_binary(&self) -> bool {
+        return self.content.is_binary();
+    }
+
+    pub fn left(&self) -> Option<&Expression> {
+        return self.content.left();
+    }
+
+    pub fn right(&self) -> Option<&Expression> {
+        return self.content.right();
+    }
+
+    pub fn literal(&self) -> Option<&Literal> {
+        return self.content.literal();
+    }
+
+    pub fn binary_kind(&self) -> Option<&BinaryExpressionKind> {
+        return self.content.binary_kind();
+    }
+
+    pub fn unary_kind(&self) -> Option<&UnaryExpressionKind> {
+        return self.content.unary_kind();
+    }
+
+    pub fn span(&self) -> Span {
+        return self.span.clone();
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        return self.span = span;
     }
 }

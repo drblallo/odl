@@ -103,4 +103,8 @@ impl Token {
             _ => None,
         }
     }
+
+    pub fn merge_span(&self, other: &Span) -> Span {
+        return self.span.merge(other);
+    }
 }

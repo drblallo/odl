@@ -54,7 +54,15 @@ impl<'a> Parser<'a> {
         };
     }
 
-    fn current(&mut self) -> Result<Token, ParserError> {
+    fn current_span(&self) -> Result<Span, ParserError> {
+        return match self.current_token.as_ref() {
+            None => Ok(Span { lo: 0, hi: 0 }),
+            Some(Err(err)) => Err(err.clone()),
+            Some(Ok(token)) => Ok(token.span.clone()),
+        };
+    }
+
+    fn current(&self) -> Result<Token, ParserError> {
         return self.current_token.clone().unwrap();
     }
 
@@ -75,17 +83,19 @@ impl<'a> Parser<'a> {
     }
 
     fn primary_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         if accept!(self, TokenKind::Ident(_)) {
             let lhs = self.current().unwrap().get_identifier().unwrap();
-            return Ok(Expression::ident(lhs));
+            return Ok(Expression::ident(lhs, start.merge(&self.current_span()?)));
         }
         if accept!(self, TokenKind::Integer(_)) {
             let lhs = self.current().unwrap().get_int().unwrap();
-            return Ok(Expression::int(lhs));
+            return Ok(Expression::int(lhs, start.merge(&self.current_span()?)));
         }
         if accept!(self, TokenKind::LParen) {
-            let lhs = self.expression()?;
+            let mut lhs = self.expression()?;
             expect!(self, TokenKind::RParen);
+            lhs.set_span(start.merge(&self.current_span()?));
             return Ok(lhs);
         }
 
@@ -93,9 +103,10 @@ impl<'a> Parser<'a> {
     }
 
     fn unary_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         if accept!(self, TokenKind::Minus) {
             let lhs = self.unary_expression()?;
-            return Ok(Expression::not(lhs));
+            return Ok(Expression::not(lhs, start.merge(&self.current_span()?)));
         } else if accept!(self, TokenKind::Plus) {
             let lhs = self.unary_expression()?;
             return Ok(lhs);
@@ -105,78 +116,128 @@ impl<'a> Parser<'a> {
     }
 
     fn multiplicative_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.unary_expression()?;
         if accept!(self, TokenKind::Star) {
             let rhs = self.multiplicative_expression()?;
-            return Ok(Expression::mult(lhs, rhs));
+            return Ok(Expression::mult(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::Slash) {
             let rhs = self.multiplicative_expression()?;
-            return Ok(Expression::div(lhs, rhs));
+            return Ok(Expression::div(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         }
 
         return Ok(lhs);
     }
 
     fn additive_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.multiplicative_expression()?;
         if accept!(self, TokenKind::Plus) {
             let rhs = self.additive_expression()?;
-            return Ok(Expression::add(lhs, rhs));
+            return Ok(Expression::add(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::Minus) {
             let rhs = self.additive_expression()?;
-            return Ok(Expression::sub(lhs, rhs));
+            return Ok(Expression::sub(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         }
 
         return Ok(lhs);
     }
 
     fn relational_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.additive_expression()?;
         if accept!(self, TokenKind::Less) {
             let rhs = self.relational_expression()?;
-            return Ok(Expression::less(lhs, rhs));
+            return Ok(Expression::less(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::LessEqual) {
             let rhs = self.relational_expression()?;
-            return Ok(Expression::less_equal(lhs, rhs));
+            return Ok(Expression::less_equal(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::Greater) {
             let rhs = self.relational_expression()?;
-            return Ok(Expression::greater(lhs, rhs));
+            return Ok(Expression::greater(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::GreaterEqual) {
             let rhs = self.relational_expression()?;
-            return Ok(Expression::greater_equal(lhs, rhs));
+            return Ok(Expression::greater_equal(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         }
         return Ok(lhs);
     }
 
     fn equal_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.relational_expression()?;
         if accept!(self, TokenKind::Equals) {
             let rhs = self.equal_expression()?;
-            return Ok(Expression::equal(lhs, rhs));
+            return Ok(Expression::equal(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         } else if accept!(self, TokenKind::Different) {
             let rhs = self.equal_expression()?;
-            return Ok(Expression::different(lhs, rhs));
+            return Ok(Expression::different(
+                lhs,
+                rhs,
+                start.merge(&self.current_span()?),
+            ));
         }
 
         return Ok(lhs);
     }
 
     fn and_expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.equal_expression()?;
         if !accept!(self, TokenKind::And) {
             return Ok(lhs);
         }
         let rhs = self.and_expression()?;
-        return Ok(Expression::and(lhs, rhs));
+        return Ok(Expression::and(
+            lhs,
+            rhs,
+            start.merge(&self.current_span()?),
+        ));
     }
 
     fn expression(&mut self) -> Result<Expression, ParserError> {
+        let start = self.current_span()?;
         let lhs = self.and_expression()?;
         if !accept!(self, TokenKind::Or) {
             return Ok(lhs);
         }
         let rhs = self.expression()?;
-        return Ok(Expression::or(lhs, rhs));
+        return Ok(Expression::or(lhs, rhs, start.merge(&self.current_span()?)));
     }
 }
 
@@ -213,6 +274,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+        assert_eq!(expression.span().lo, 0);
+        assert_eq!(expression.span().hi, 7);
     }
 
     #[test]
@@ -232,6 +295,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+        assert_eq!(expression.span().lo, 0);
+        assert_eq!(expression.span().hi, 8);
     }
 
     #[test]
@@ -251,6 +316,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+        assert_eq!(expression.span().lo, 0);
+        assert_eq!(expression.span().hi, 9);
     }
 
     #[test]
@@ -270,6 +337,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+        assert_eq!(expression.span().lo, 0);
+        assert_eq!(expression.span().hi, 7);
     }
 
     #[test]
@@ -289,5 +358,7 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+        assert_eq!(expression.span().lo, 0);
+        assert_eq!(expression.span().hi, 10);
     }
 }
