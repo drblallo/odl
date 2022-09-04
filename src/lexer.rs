@@ -11,7 +11,16 @@ lexer! {
     // "C++-style" comments (// ...)
     r#"#[^\n]*"# => TokenKind::Comment,
 
-    r#"print"# => TokenKind::Print,
+    r#"or"# => TokenKind::Or,
+    r#"and"# => TokenKind::And,
+    r#"=="# => TokenKind::Equals,
+    r#"!="# => TokenKind::Different,
+
+    r#"<="# => TokenKind::LessEqual,
+    r#"<"# => TokenKind::Less,
+    r#">="# => TokenKind::GreaterEqual,
+    r#">"# => TokenKind::Greater,
+
 
     r#"[0-9]+"# => {
         if let Ok(i) = text.parse() {
@@ -23,7 +32,6 @@ lexer! {
 
     r#"[a-zA-Z_][a-zA-Z0-9_]*"# => TokenKind::Ident(text.to_owned()),
 
-    r#"="# => TokenKind::Equals,
     r#"\+"# => TokenKind::Plus,
     r#"-"# => TokenKind::Minus,
     r#"\*"# => TokenKind::Star,

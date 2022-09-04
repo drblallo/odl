@@ -5,6 +5,7 @@ use crate::token::*;
 
 pub struct Parser<'a> {
     lexer: IndentLexer<'a>,
+    current_token: Option<Result<Token, ParserError>>,
     next_token: Result<Token, ParserError>,
 }
 
@@ -38,30 +39,144 @@ impl<'a> Parser<'a> {
     pub fn new(s: &'a str) -> Result<Parser<'a>, ParserError> {
         let mut lexer = IndentLexer::new(s);
         let next_token = lexer.next_token();
-        return Ok(Parser { lexer, next_token });
+        let current_token = None;
+        return Ok(Parser {
+            lexer,
+            current_token,
+            next_token,
+        });
     }
 
     fn peek(&self) -> Option<Token> {
         return match self.next_token.as_ref() {
-            Err(value) => None,
+            Err(_value) => None,
             Ok(value) => Some(value.clone()),
         };
     }
 
-    fn next(&mut self) -> Result<Token, ParserError> {
-        let to_return = self.next_token.clone();
-        self.next_token = self.lexer.next_token();
-        return to_return;
+    fn current(&mut self) -> Result<Token, ParserError> {
+        return self.current_token.clone().unwrap();
     }
 
-    fn parse_int(&mut self) -> Result<Literal, ParserError> {
+    fn next(&mut self) -> Result<Token, ParserError> {
+        self.current_token = Some(self.next_token.clone());
+        self.next_token = self.lexer.next_token();
+        return self.current_token.clone().unwrap();
+    }
+
+    fn int(&mut self) -> Result<Literal, ParserError> {
         let token = expect!(self, TokenKind::Integer(_i));
         return Ok(Literal::Integer(token.get_int().unwrap()));
     }
 
-    fn parse_identifier(&mut self) -> Result<String, ParserError> {
+    fn identifier(&mut self) -> Result<String, ParserError> {
         let token = expect!(self, TokenKind::Ident(_i));
         return Ok(token.get_identifier().unwrap());
+    }
+
+    fn primary_expression(&mut self) -> Result<Expression, ParserError> {
+        if accept!(self, TokenKind::Ident(_)) {
+            let lhs = self.current().unwrap().get_identifier().unwrap();
+            return Ok(Expression::ident(lhs));
+        }
+        if accept!(self, TokenKind::Integer(_)) {
+            let lhs = self.current().unwrap().get_int().unwrap();
+            return Ok(Expression::int(lhs));
+        }
+        if accept!(self, TokenKind::LParen) {
+            let lhs = self.expression()?;
+            expect!(self, TokenKind::RParen);
+            return Ok(lhs);
+        }
+
+        return self.primary_expression();
+    }
+
+    fn unary_expression(&mut self) -> Result<Expression, ParserError> {
+        if accept!(self, TokenKind::Minus) {
+            let lhs = self.unary_expression()?;
+            return Ok(Expression::not(lhs));
+        } else if accept!(self, TokenKind::Plus) {
+            let lhs = self.unary_expression()?;
+            return Ok(lhs);
+        }
+
+        return self.primary_expression();
+    }
+
+    fn multiplicative_expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.unary_expression()?;
+        if accept!(self, TokenKind::Star) {
+            let rhs = self.multiplicative_expression()?;
+            return Ok(Expression::mult(lhs, rhs));
+        } else if accept!(self, TokenKind::Slash) {
+            let rhs = self.multiplicative_expression()?;
+            return Ok(Expression::div(lhs, rhs));
+        }
+
+        return Ok(lhs);
+    }
+
+    fn additive_expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.multiplicative_expression()?;
+        if accept!(self, TokenKind::Plus) {
+            let rhs = self.additive_expression()?;
+            return Ok(Expression::add(lhs, rhs));
+        } else if accept!(self, TokenKind::Minus) {
+            let rhs = self.additive_expression()?;
+            return Ok(Expression::sub(lhs, rhs));
+        }
+
+        return Ok(lhs);
+    }
+
+    fn relational_expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.additive_expression()?;
+        if accept!(self, TokenKind::Less) {
+            let rhs = self.relational_expression()?;
+            return Ok(Expression::less(lhs, rhs));
+        } else if accept!(self, TokenKind::LessEqual) {
+            let rhs = self.relational_expression()?;
+            return Ok(Expression::less_equal(lhs, rhs));
+        } else if accept!(self, TokenKind::Greater) {
+            let rhs = self.relational_expression()?;
+            return Ok(Expression::greater(lhs, rhs));
+        } else if accept!(self, TokenKind::GreaterEqual) {
+            let rhs = self.relational_expression()?;
+            return Ok(Expression::greater_equal(lhs, rhs));
+        }
+        return Ok(lhs);
+    }
+
+    fn equal_expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.relational_expression()?;
+        if accept!(self, TokenKind::Equals) {
+            let rhs = self.equal_expression()?;
+            return Ok(Expression::equal(lhs, rhs));
+        } else if accept!(self, TokenKind::Different) {
+            let rhs = self.equal_expression()?;
+            return Ok(Expression::different(lhs, rhs));
+        }
+
+        return Ok(lhs);
+    }
+
+    fn and_expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.equal_expression()?;
+        if !accept!(self, TokenKind::And) {
+            return Ok(lhs);
+        }
+        let rhs = self.and_expression()?;
+        return Ok(Expression::and(lhs, rhs));
+    }
+
+    fn expression(&mut self) -> Result<Expression, ParserError> {
+        let lhs = self.and_expression()?;
+        if !accept!(self, TokenKind::Or) {
+            return Ok(lhs);
+        }
+        let rhs = self.expression()?;
+        return Ok(Expression::or(lhs, rhs));
     }
 }
 
@@ -70,14 +185,109 @@ mod tests {
     use crate::parser::*;
 
     #[test]
-    fn parse_integer_test() {
+    fn integer_test() {
         let mut parser = Parser::new("65").unwrap();
-        assert!(matches!(parser.parse_int(), Ok(Literal::Integer(65))));
+        assert!(matches!(parser.int(), Ok(Literal::Integer(65))));
     }
 
     #[test]
-    fn parse_indentifier_test() {
+    fn indentifier_test() {
         let mut parser = Parser::new("asd").unwrap();
-        assert!(parser.parse_identifier().unwrap() == "asd");
+        assert!(parser.identifier().unwrap() == "asd");
+    }
+
+    #[test]
+    fn int_expression() {
+        let mut parser = Parser::new("43 + 53").unwrap();
+        let maybe_expression = parser.expression();
+        assert!(maybe_expression.is_ok());
+        let expression = maybe_expression.unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::Add
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+    }
+
+    #[test]
+    fn equal_expression() {
+        let mut parser = Parser::new("43 == 53").unwrap();
+        let maybe_expression = parser.expression();
+        assert!(maybe_expression.is_ok());
+        let expression = maybe_expression.unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::Equal
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+    }
+
+    #[test]
+    fn and_expression() {
+        let mut parser = Parser::new("43 and 53").unwrap();
+        let maybe_expression = parser.expression();
+        assert!(maybe_expression.is_ok());
+        let expression = maybe_expression.unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::And
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+    }
+
+    #[test]
+    fn les_expression() {
+        let mut parser = Parser::new("43 < 53").unwrap();
+        let maybe_expression = parser.expression();
+        assert!(maybe_expression.is_ok());
+        let expression = maybe_expression.unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::Less
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+    }
+
+    #[test]
+    fn par_expression() {
+        let mut parser = Parser::new("(43 >= 53)").unwrap();
+        let maybe_expression = parser.expression();
+        assert!(maybe_expression.is_ok());
+        let expression = maybe_expression.unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::GreaterEqual
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
     }
 }

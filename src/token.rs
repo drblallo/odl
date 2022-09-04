@@ -2,12 +2,19 @@
 pub enum TokenKind {
     Ident(String),
 
-    Print,
-
     Integer(i64),
     Equals,
+    Different,
+
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+
     Plus,
     Minus,
+    Or,
+    And,
     Star,
     Slash,
     LParen,
