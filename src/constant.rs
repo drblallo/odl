@@ -107,13 +107,11 @@ impl Serializable for ConstantDeclaration {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        indents: usize,
     ) -> Result<(), ::std::fmt::Error> {
-        for _ in 0..indent {
-            write!(f, " ")?;
-        }
+        indent(f, indents)?;
         write!(f, "constant {}", self.name)?;
-        return self.body.serialize(f, indent);
+        return self.body.serialize(f, indents);
     }
 }
 

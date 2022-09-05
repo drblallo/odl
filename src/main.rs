@@ -18,6 +18,6 @@ fn main() {
     let mut s = String::new();
     std::io::stdin().read_to_string(&mut s).unwrap();
     let mut lexer = exit_on_error(Parser::new(&s));
-    let result = exit_on_error(lexer.constant_declaration());
+    let result = exit_on_error(lexer.declaration());
     println!("{}", result);
 }

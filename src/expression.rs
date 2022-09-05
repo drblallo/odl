@@ -1,12 +1,16 @@
 use crate::token::Span;
 use core::fmt::Display;
+use core::fmt::Formatter;
+
+pub fn indent(f: &mut std::fmt::Formatter, indent: usize) -> Result<(), std::fmt::Error> {
+    for _ in 0..indent {
+        write!(f, " ")?;
+    }
+    return Ok(());
+}
 
 pub trait Serializable {
-    fn serialize(
-        &self,
-        f: &mut std::fmt::Formatter,
-        indent: usize,
-    ) -> Result<(), ::std::fmt::Error>;
+    fn serialize(&self, f: &mut Formatter, indent: usize) -> Result<(), ::std::fmt::Error>;
 }
 
 #[derive(Debug, Clone, PartialEq)]

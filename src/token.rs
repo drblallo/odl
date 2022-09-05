@@ -23,6 +23,7 @@ pub enum TokenKind {
     Semi,
 
     Constant,
+    Opt,
 
     Whitespace(i64),
     Comment,

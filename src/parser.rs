@@ -1,7 +1,9 @@
 use crate::constant::*;
+use crate::declaration::*;
 use crate::error::ParserError;
 use crate::expression::*;
 use crate::lexer::IndentLexer;
+use crate::option::*;
 use crate::token::*;
 
 pub struct Parser<'a> {
@@ -272,6 +274,34 @@ impl<'a> Parser<'a> {
         let mut constant = self.constant_body()?;
         constant.set_span(start.merge(&self.current_span()?));
         return Ok(constant);
+    }
+
+    pub fn option_declaration(&mut self) -> Result<OptionDeclaration, ParserError> {
+        let start = self.current_span()?;
+        expect!(self, TokenKind::Opt);
+        let name = self.identifier()?;
+        expect!(self, TokenKind::Indent);
+
+        let mut declarations = Vec::new();
+        while !accept!(self, TokenKind::Deindent) {
+            declarations.push(self.declaration()?);
+        }
+
+        let mut decl = OptionDeclaration::new(name, start.merge(&self.current_span()?));
+        *decl.get_fields_mut() = declarations;
+        return Ok(decl);
+    }
+
+    pub fn declaration(&mut self) -> Result<Declaration, ParserError> {
+        if self.peek().map_or(false, |x| x.kind == TokenKind::Constant) {
+            let decl = self.constant_declaration()?;
+            return Ok(Declaration::Const(decl));
+        }
+        if self.peek().map_or(false, |x| x.kind == TokenKind::Opt) {
+            let decl = self.option_declaration()?;
+            return Ok(Declaration::Opt(decl));
+        }
+        return Err(ParserError::new_unexpected_token(self.current()?));
     }
 }
 

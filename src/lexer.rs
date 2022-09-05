@@ -11,6 +11,7 @@ lexer! {
     r#"#[^\n]*"# => TokenKind::Comment,
 
     r#"constant"# => TokenKind::Constant,
+    r#"option"# => TokenKind::Opt,
     r#"or"# => TokenKind::Or,
     r#"and"# => TokenKind::And,
     r#"=="# => TokenKind::Equals,
