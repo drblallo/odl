@@ -11,6 +11,7 @@ pub enum TokenKind {
     Greater,
     GreaterEqual,
 
+    Assign,
     Plus,
     Minus,
     Or,
@@ -20,6 +21,8 @@ pub enum TokenKind {
     LParen,
     RParen,
     Semi,
+
+    Constant,
 
     Whitespace(i64),
     Comment,

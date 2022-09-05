@@ -1,5 +1,6 @@
-use crate::ast::*;
+use crate::constant::*;
 use crate::error::ParserError;
+use crate::expression::*;
 use crate::lexer::IndentLexer;
 use crate::token::*;
 
@@ -239,6 +240,39 @@ impl<'a> Parser<'a> {
         let rhs = self.expression()?;
         return Ok(Expression::or(lhs, rhs, start.merge(&self.current_span()?)));
     }
+
+    fn constant_body(&mut self) -> Result<ConstantDeclaration, ParserError> {
+        let start = self.current_span()?;
+        let name = self.identifier()?;
+
+        if accept!(self, TokenKind::Assign) {
+            let initializer = self.expression()?;
+            return Ok(ConstantDeclaration::new_direct(
+                name,
+                initializer,
+                start.merge(&self.current_span()?),
+            ));
+        }
+
+        expect!(self, TokenKind::Indent);
+
+        let mut children = Vec::new();
+        while !accept!(self, TokenKind::Deindent) {
+            children.push(self.constant_body()?);
+        }
+
+        let mut x = ConstantDeclaration::new(name, start.merge(&self.current_span()?));
+        *x.get_fields_mut().unwrap() = children;
+        return Ok(x);
+    }
+
+    pub fn constant_declaration(&mut self) -> Result<ConstantDeclaration, ParserError> {
+        let start = self.current_span()?;
+        expect!(self, TokenKind::Constant);
+        let mut constant = self.constant_body()?;
+        constant.set_span(start.merge(&self.current_span()?));
+        return Ok(constant);
+    }
 }
 
 #[cfg(test)]
@@ -360,5 +394,37 @@ mod tests {
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
         assert_eq!(expression.span().lo, 0);
         assert_eq!(expression.span().hi, 10);
+    }
+
+    #[test]
+    fn constant_declaration() {
+        let mut parser = Parser::new("constant asd = (43 >= 53)").unwrap();
+        let maybe_declaration = parser.constant_declaration();
+        assert!(maybe_declaration.is_ok());
+        let declaration = maybe_declaration.unwrap();
+        assert_eq!(declaration.name(), "asd");
+        let expression = declaration.get_initializer().unwrap();
+        assert!(expression.is_binary());
+        assert_eq!(
+            *expression.binary_kind().unwrap(),
+            BinaryExpressionKind::GreaterEqual
+        );
+        let rhs = expression.right();
+        let lhs = expression.left();
+        assert!(rhs.unwrap().is_literal());
+        assert!(lhs.unwrap().is_literal());
+        assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
+        assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
+    }
+
+    #[test]
+    fn constant_declaration_multiline() {
+        let mut parser = Parser::new("constant asd\n rasd = 4\n\n").unwrap();
+        let maybe_declaration = parser.constant_declaration();
+        assert!(maybe_declaration.is_ok());
+        let declaration = maybe_declaration.unwrap();
+        assert_eq!(declaration.name(), "asd");
+        let field = declaration.get_field(0);
+        assert_eq!(field.unwrap().name(), "rasd");
     }
 }

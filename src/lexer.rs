@@ -1,6 +1,5 @@
 use crate::error::ParserError;
-use crate::token::Token;
-use crate::token::TokenKind;
+use crate::token::*;
 use plex::lexer;
 
 lexer! {
@@ -11,6 +10,7 @@ lexer! {
     // "C++-style" comments (// ...)
     r#"#[^\n]*"# => TokenKind::Comment,
 
+    r#"constant"# => TokenKind::Constant,
     r#"or"# => TokenKind::Or,
     r#"and"# => TokenKind::And,
     r#"=="# => TokenKind::Equals,
@@ -39,6 +39,7 @@ lexer! {
     r#"\("# => TokenKind::LParen,
     r#"\)"# => TokenKind::RParen,
     r#";"# => TokenKind::Semi,
+    r#"="# => TokenKind::Assign,
 
     r#"."# => panic!("unexpected character: {}", text),
 }
@@ -145,6 +146,16 @@ impl<'a> IndentLexer<'a> {
 
         let to_return = self.current_token.clone();
         self.advance_impl();
+
+        if to_return.is_none() && !self.indentation_stack.is_empty() {
+            let to_emit = Token {
+                kind: TokenKind::Deindent,
+                span: Span { lo: 0, hi: 0 },
+            };
+            self.indentation_stack.pop();
+            return Ok(to_emit);
+        }
+
         return match to_return {
             Some(value) => Ok(value),
             None => Err(ParserError::new_end_of_token_stream()),
@@ -164,6 +175,10 @@ impl<'a> IndentLexer<'a> {
         };
 
         let zero: i64 = 0;
+        if self.indentation_stack.last().unwrap_or(&zero) == &current_white_space {
+            return Ok(());
+        }
+
         if self.indentation_stack.last().unwrap_or(&zero) < &current_white_space {
             let to_emit = Token {
                 kind: TokenKind::Indent,
@@ -185,7 +200,9 @@ impl<'a> IndentLexer<'a> {
                     current_white_space,
                 ));
             } else if indent == current_white_space {
-                self.indentation_stack.push(current_white_space);
+                if indent != 0 {
+                    self.indentation_stack.push(current_white_space);
+                }
                 return Ok(());
             }
 
@@ -202,7 +219,7 @@ impl<'a> IndentLexer<'a> {
     pub fn next_token(&mut self) -> Result<Token, ParserError> {
         loop {
             let token = self.next_with_whitespace()?;
-            if token.is_whitespace() {
+            if token.is_whitespace() || token.kind == TokenKind::EndLine {
                 continue;
             }
 
@@ -276,7 +293,6 @@ mod tests {
             token_kind(&lexer.next()),
             TokenKind::Ident("asd".to_owned())
         );
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert!(lexer.next().is_none());
     }
 
@@ -286,16 +302,12 @@ mod tests {
         let asd_token = TokenKind::Ident("asd".to_owned());
         assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
         assert_eq!(token_kind(&lexer.next()), asd_token);
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
         assert_eq!(token_kind(&lexer.next()), asd_token);
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert_eq!(token_kind(&lexer.next()), TokenKind::Deindent);
         assert_eq!(token_kind(&lexer.next()), asd_token);
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert_eq!(token_kind(&lexer.next()), TokenKind::Deindent);
         assert_eq!(token_kind(&lexer.next()), asd_token);
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert!(lexer.next().is_none());
     }
 
@@ -305,7 +317,42 @@ mod tests {
         let asd_token = TokenKind::Ident("asd".to_owned());
         assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
         assert_eq!(token_kind(&lexer.next()), asd_token);
-        assert_eq!(token_kind(&lexer.next()), TokenKind::EndLine);
         assert!(lexer.next().unwrap().is_err());
+    }
+
+    #[test]
+    fn assing_test() {
+        let mut lexer = IndentLexer::new(" = ");
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Assign);
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Deindent);
+        assert!(lexer.next().is_none());
+    }
+
+    #[test]
+    fn constant_test() {
+        let mut lexer = IndentLexer::new("constant asd\n rasd = 4\n\n");
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Constant);
+        assert_eq!(
+            token_kind(&lexer.next()),
+            TokenKind::Ident("asd".to_owned())
+        );
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
+        assert_eq!(
+            token_kind(&lexer.next()),
+            TokenKind::Ident("rasd".to_owned())
+        );
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Assign);
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Integer(4));
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Deindent);
+        assert!(lexer.next().is_none());
+    }
+
+    #[test]
+    fn indent_test_2() {
+        let mut lexer = IndentLexer::new("\n \n\n");
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Indent);
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Deindent);
+        assert!(lexer.next().is_none());
     }
 }

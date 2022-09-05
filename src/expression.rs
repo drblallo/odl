@@ -1,6 +1,14 @@
 use crate::token::Span;
 use core::fmt::Display;
 
+pub trait Serializable {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error>;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Integer(i64),
@@ -16,6 +24,21 @@ impl Display for Literal {
             Literal::Str(s) => write!(f, "Literal \"{}\"", s),
             Literal::Float(v) => write!(f, "Literal {}", v),
             Literal::Indent(v) => write!(f, "Literal {}", v),
+        };
+    }
+}
+
+impl Serializable for Literal {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error> {
+        return match self {
+            Literal::Integer(i) => write!(f, "{}", i),
+            Literal::Str(s) => write!(f, "\"{}\"", s),
+            Literal::Float(v) => write!(f, "{}", v),
+            Literal::Indent(v) => write!(f, "{}", v),
         };
     }
 }
@@ -36,9 +59,44 @@ pub enum BinaryExpressionKind {
     Different,
 }
 
+impl Serializable for BinaryExpressionKind {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error> {
+        match self {
+            BinaryExpressionKind::Add => write!(f, "+"),
+            BinaryExpressionKind::Sub => write!(f, "-"),
+            BinaryExpressionKind::Mult => write!(f, "*"),
+            BinaryExpressionKind::Div => write!(f, "/"),
+            BinaryExpressionKind::Or => write!(f, "or"),
+            BinaryExpressionKind::And => write!(f, "and"),
+            BinaryExpressionKind::Equal => write!(f, "=="),
+            BinaryExpressionKind::Less => write!(f, "<"),
+            BinaryExpressionKind::LessEqual => write!(f, "<="),
+            BinaryExpressionKind::GreaterEqual => write!(f, ">="),
+            BinaryExpressionKind::Greater => write!(f, ">"),
+            BinaryExpressionKind::Different => write!(f, "!="),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryExpressionKind {
     Not,
+}
+
+impl Serializable for UnaryExpressionKind {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error> {
+        match self {
+            UnaryExpressionKind::Not => write!(f, "-"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +104,33 @@ pub enum ExpressionEnum {
     Lit(Literal),
     Una(UnaryExpressionKind, Box<Expression>),
     Bin(BinaryExpressionKind, Box<Expression>, Box<Expression>),
+}
+
+impl Serializable for ExpressionEnum {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error> {
+        return match self {
+            ExpressionEnum::Lit(literal) => literal.serialize(f, indent),
+            ExpressionEnum::Una(kind, exp) => {
+                kind.serialize(f, indent)?;
+                exp.serialize(f, indent)?;
+                Ok(())
+            }
+            ExpressionEnum::Bin(kind, lhs, rhs) => {
+                write!(f, "(")?;
+                lhs.serialize(f, indent)?;
+                write!(f, " ")?;
+                kind.serialize(f, indent)?;
+                write!(f, " ")?;
+                rhs.serialize(f, indent)?;
+                write!(f, ")")?;
+                Ok(())
+            }
+        };
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -364,5 +449,15 @@ impl Expression {
 
     pub fn set_span(&mut self, span: Span) {
         return self.span = span;
+    }
+}
+
+impl Serializable for Expression {
+    fn serialize(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent: usize,
+    ) -> Result<(), ::std::fmt::Error> {
+        return self.content.serialize(f, indent);
     }
 }
