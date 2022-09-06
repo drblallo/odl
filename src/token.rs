@@ -34,15 +34,27 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourceLocation {
+    pub row: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
-    pub lo: usize,
-    pub hi: usize,
+    pub lo: SourceLocation,
+    pub hi: SourceLocation,
 }
 
 impl Span {
     pub fn merge(self, other: &Span) -> Span {
         let lo = self.lo;
         let hi = other.hi;
+        return Span { lo, hi };
+    }
+
+    pub fn new() -> Span {
+        let lo = SourceLocation { row: 0, column: 0 };
+        let hi = SourceLocation { row: 0, column: 0 };
         return Span { lo, hi };
     }
 }
@@ -54,7 +66,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, lo: usize, hi: usize) -> Token {
+    pub fn new(kind: TokenKind, lo: SourceLocation, hi: SourceLocation) -> Token {
         Token {
             kind,
             span: Span { lo, hi },

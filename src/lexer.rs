@@ -48,6 +48,7 @@ lexer! {
 pub struct Lexer<'a> {
     original: &'a str,
     remaining: &'a str,
+    location: SourceLocation,
 }
 
 impl<'a> Lexer<'a> {
@@ -55,6 +56,7 @@ impl<'a> Lexer<'a> {
         Lexer {
             original: s,
             remaining: s,
+            location: SourceLocation { row: 0, column: 0 },
         }
     }
 }
@@ -64,9 +66,25 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<Token> {
         loop {
             let token = if let Some((tok, new_remaining)) = next_token(self.remaining) {
-                let lo = self.original.len() - self.remaining.len();
-                let hi = self.original.len() - new_remaining.len();
+                let begin = self.original.len() - self.remaining.len();
+                let end = self.original.len() - new_remaining.len();
                 self.remaining = new_remaining;
+
+                let lo = self.location.clone();
+
+                for i in begin..end {
+                    match self.original.chars().nth(i).unwrap() {
+                        '\n' => {
+                            self.location.row = self.location.row + 1;
+                            self.location.column = 0;
+                        }
+                        _ => {
+                            self.location.column = self.location.column + 1;
+                        }
+                    }
+                }
+
+                let hi = self.location.clone();
                 Some(Token::new(tok, lo, hi))
             } else {
                 return None;
@@ -151,7 +169,10 @@ impl<'a> IndentLexer<'a> {
         if to_return.is_none() && !self.indentation_stack.is_empty() {
             let to_emit = Token {
                 kind: TokenKind::Deindent,
-                span: Span { lo: 0, hi: 0 },
+                span: Span {
+                    lo: self.lexer.location,
+                    hi: self.lexer.location,
+                },
             };
             self.indentation_stack.pop();
             return Ok(to_emit);
@@ -251,9 +272,7 @@ impl<'a> Iterator for IndentLexer<'a> {
 mod tests {
     use crate::error::ParserError;
     use crate::lexer::IndentLexer;
-    use crate::token::Span;
-    use crate::token::Token;
-    use crate::token::TokenKind;
+    use crate::token::*;
 
     fn token_kind(option: &Option<Result<Token, ParserError>>) -> TokenKind {
         assert!(option.is_some());
@@ -282,8 +301,9 @@ mod tests {
     #[test]
     fn span_identifier_test() {
         let mut lexer = IndentLexer::new("hey");
-        let kind = token_span(&lexer.next());
-        assert_eq!(kind, Span { lo: 0, hi: 3 });
+        let span = token_span(&lexer.next());
+        assert_eq!(span.lo, SourceLocation { row: 0, column: 0 });
+        assert_eq!(span.hi, SourceLocation { row: 0, column: 3 });
         assert!(lexer.next().is_none());
     }
 

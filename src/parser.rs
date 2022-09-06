@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
 
     fn current_span(&self) -> Result<Span, ParserError> {
         return match self.current_token.as_ref() {
-            None => Ok(Span { lo: 0, hi: 0 }),
+            None => Ok(Span::new()),
             Some(Err(err)) => Err(err.clone()),
             Some(Ok(token)) => Ok(token.span.clone()),
         };
@@ -338,8 +338,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
-        assert_eq!(expression.span().lo, 0);
-        assert_eq!(expression.span().hi, 7);
+        assert_eq!(expression.span().lo.column, 0);
+        assert_eq!(expression.span().hi.column, 7);
     }
 
     #[test]
@@ -359,8 +359,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
-        assert_eq!(expression.span().lo, 0);
-        assert_eq!(expression.span().hi, 8);
+        assert_eq!(expression.span().lo.column, 0);
+        assert_eq!(expression.span().hi.column, 8);
     }
 
     #[test]
@@ -380,8 +380,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
-        assert_eq!(expression.span().lo, 0);
-        assert_eq!(expression.span().hi, 9);
+        assert_eq!(expression.span().lo.column, 0);
+        assert_eq!(expression.span().hi.column, 9);
     }
 
     #[test]
@@ -401,8 +401,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
-        assert_eq!(expression.span().lo, 0);
-        assert_eq!(expression.span().hi, 7);
+        assert_eq!(expression.span().lo.column, 0);
+        assert_eq!(expression.span().hi.column, 7);
     }
 
     #[test]
@@ -422,8 +422,8 @@ mod tests {
         assert!(lhs.unwrap().is_literal());
         assert_eq!(*lhs.unwrap().literal().unwrap(), Literal::Integer(43));
         assert_eq!(*rhs.unwrap().literal().unwrap(), Literal::Integer(53));
-        assert_eq!(expression.span().lo, 0);
-        assert_eq!(expression.span().hi, 10);
+        assert_eq!(expression.span().lo.column, 0);
+        assert_eq!(expression.span().hi.column, 10);
     }
 
     #[test]
