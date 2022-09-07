@@ -1,4 +1,5 @@
 use crate::expression::*;
+use crate::serialization::*;
 use crate::token::Span;
 use std::fmt::Display;
 
@@ -12,17 +13,18 @@ impl Serializable for ConstantBody {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         return match self {
             ConstantBody::Direct(e) => {
                 write!(f, " = ")?;
-                e.serialize(f, indent)
+                e.serialize(f, ctx)
             }
             ConstantBody::Content(vec) => {
                 write!(f, "\n")?;
+
                 for entry in vec {
-                    entry.serialize(f, indent + 1)?;
+                    entry.serialize(f, &ctx.indented())?;
                 }
                 Ok(())
             }
@@ -107,16 +109,20 @@ impl Serializable for ConstantDeclaration {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indents: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
-        indent(f, indents)?;
-        write!(f, "constant {}", self.name)?;
-        return self.body.serialize(f, indents);
+        indent(f, ctx.indent)?;
+        if ctx.emission_kind != EmissionKind::Const {
+            write!(f, "const {}", self.name)?;
+        } else {
+            write!(f, "{}", self.name)?;
+        }
+        return self.body.serialize(f, &ctx.emitting_const());
     }
 }
 
 impl Display for ConstantDeclaration {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-        return self.serialize(f, 0);
+        return self.serialize(f, &SerializationContext::new());
     }
 }

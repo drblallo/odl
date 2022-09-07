@@ -10,8 +10,8 @@ lexer! {
     // "C++-style" comments (// ...)
     r#"#[^\n]*"# => TokenKind::Comment,
 
-    r#"constant"# => TokenKind::Constant,
-    r#"option"# => TokenKind::Opt,
+    r#"const"# => TokenKind::Const,
+    r#"opt"# => TokenKind::Opt,
     r#"or"# => TokenKind::Or,
     r#"and"# => TokenKind::And,
     r#"=="# => TokenKind::Equals,
@@ -352,8 +352,8 @@ mod tests {
 
     #[test]
     fn constant_test() {
-        let mut lexer = IndentLexer::new("constant asd\n rasd = 4\n\n");
-        assert_eq!(token_kind(&lexer.next()), TokenKind::Constant);
+        let mut lexer = IndentLexer::new("const asd\n rasd = 4\n\n");
+        assert_eq!(token_kind(&lexer.next()), TokenKind::Const);
         assert_eq!(
             token_kind(&lexer.next()),
             TokenKind::Ident("asd".to_owned())

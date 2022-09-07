@@ -1,6 +1,6 @@
 use crate::constant::*;
-use crate::expression::*;
 use crate::option::*;
+use crate::serialization::*;
 use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,17 +13,17 @@ impl Serializable for Declaration {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indents: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         return match self {
-            Declaration::Opt(dec) => dec.serialize(f, indents),
-            Declaration::Const(dec) => dec.serialize(f, indents),
+            Declaration::Opt(dec) => dec.serialize(f, ctx),
+            Declaration::Const(dec) => dec.serialize(f, ctx),
         };
     }
 }
 
 impl Display for Declaration {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-        return self.serialize(f, 0);
+        return self.serialize(f, &SerializationContext::new());
     }
 }

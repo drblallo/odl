@@ -270,21 +270,28 @@ impl<'a> Parser<'a> {
 
     pub fn constant_declaration(&mut self) -> Result<ConstantDeclaration, ParserError> {
         let start = self.current_span()?;
-        expect!(self, TokenKind::Constant);
+        expect!(self, TokenKind::Const);
         let mut constant = self.constant_body()?;
         constant.set_span(start.merge(&self.current_span()?));
         return Ok(constant);
     }
 
-    pub fn option_declaration(&mut self) -> Result<OptionDeclaration, ParserError> {
+    pub fn option_field_declaration(&mut self) -> Result<OptionField, ParserError> {
+        if self.peek().map_or(false, |x| x.kind == TokenKind::Const) {
+            let decl = self.constant_declaration()?;
+            return Ok(OptionField::Const(decl));
+        }
+        return Ok(OptionField::SubOption(self.option_declaration_body()?));
+    }
+
+    pub fn option_declaration_body(&mut self) -> Result<OptionDeclaration, ParserError> {
         let start = self.current_span()?;
-        expect!(self, TokenKind::Opt);
         let name = self.identifier()?;
         expect!(self, TokenKind::Indent);
 
         let mut declarations = Vec::new();
         while !accept!(self, TokenKind::Deindent) {
-            declarations.push(self.declaration()?);
+            declarations.push(self.option_field_declaration()?);
         }
 
         let mut decl = OptionDeclaration::new(name, start.merge(&self.current_span()?));
@@ -292,8 +299,16 @@ impl<'a> Parser<'a> {
         return Ok(decl);
     }
 
+    pub fn option_declaration(&mut self) -> Result<OptionDeclaration, ParserError> {
+        let start = self.current_span()?;
+        expect!(self, TokenKind::Opt);
+        let mut declaration = self.option_declaration_body()?;
+        declaration.set_span(start.merge(&self.current_span()?));
+        return Ok(declaration);
+    }
+
     pub fn declaration(&mut self) -> Result<Declaration, ParserError> {
-        if self.peek().map_or(false, |x| x.kind == TokenKind::Constant) {
+        if self.peek().map_or(false, |x| x.kind == TokenKind::Const) {
             let decl = self.constant_declaration()?;
             return Ok(Declaration::Const(decl));
         }
@@ -428,7 +443,7 @@ mod tests {
 
     #[test]
     fn constant_declaration() {
-        let mut parser = Parser::new("constant asd = (43 >= 53)").unwrap();
+        let mut parser = Parser::new("const asd = (43 >= 53)").unwrap();
         let maybe_declaration = parser.constant_declaration();
         assert!(maybe_declaration.is_ok());
         let declaration = maybe_declaration.unwrap();
@@ -449,7 +464,7 @@ mod tests {
 
     #[test]
     fn constant_declaration_multiline() {
-        let mut parser = Parser::new("constant asd\n rasd = 4\n\n").unwrap();
+        let mut parser = Parser::new("const asd\n rasd = 4\n\n").unwrap();
         let maybe_declaration = parser.constant_declaration();
         assert!(maybe_declaration.is_ok());
         let declaration = maybe_declaration.unwrap();

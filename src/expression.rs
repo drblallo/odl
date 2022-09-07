@@ -1,17 +1,7 @@
+use crate::serialization::*;
 use crate::token::Span;
 use core::fmt::Display;
 use core::fmt::Formatter;
-
-pub fn indent(f: &mut std::fmt::Formatter, indent: usize) -> Result<(), std::fmt::Error> {
-    for _ in 0..indent {
-        write!(f, " ")?;
-    }
-    return Ok(());
-}
-
-pub trait Serializable {
-    fn serialize(&self, f: &mut Formatter, indent: usize) -> Result<(), ::std::fmt::Error>;
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
@@ -36,7 +26,7 @@ impl Serializable for Literal {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         return match self {
             Literal::Integer(i) => write!(f, "{}", i),
@@ -67,7 +57,7 @@ impl Serializable for BinaryExpressionKind {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         match self {
             BinaryExpressionKind::Add => write!(f, "+"),
@@ -95,7 +85,7 @@ impl Serializable for UnaryExpressionKind {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         match self {
             UnaryExpressionKind::Not => write!(f, "-"),
@@ -114,22 +104,22 @@ impl Serializable for ExpressionEnum {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
         return match self {
-            ExpressionEnum::Lit(literal) => literal.serialize(f, indent),
+            ExpressionEnum::Lit(literal) => literal.serialize(f, ctx),
             ExpressionEnum::Una(kind, exp) => {
-                kind.serialize(f, indent)?;
-                exp.serialize(f, indent)?;
+                kind.serialize(f, ctx)?;
+                exp.serialize(f, ctx)?;
                 Ok(())
             }
             ExpressionEnum::Bin(kind, lhs, rhs) => {
                 write!(f, "(")?;
-                lhs.serialize(f, indent)?;
+                lhs.serialize(f, ctx)?;
                 write!(f, " ")?;
-                kind.serialize(f, indent)?;
+                kind.serialize(f, ctx)?;
                 write!(f, " ")?;
-                rhs.serialize(f, indent)?;
+                rhs.serialize(f, ctx)?;
                 write!(f, ")")?;
                 Ok(())
             }
@@ -460,8 +450,8 @@ impl Serializable for Expression {
     fn serialize(
         &self,
         f: &mut std::fmt::Formatter,
-        indent: usize,
+        ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
-        return self.content.serialize(f, indent);
+        return self.content.serialize(f, ctx);
     }
 }

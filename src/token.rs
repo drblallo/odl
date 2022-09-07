@@ -22,7 +22,7 @@ pub enum TokenKind {
     RParen,
     Semi,
 
-    Constant,
+    Const,
     Opt,
 
     Whitespace(i64),

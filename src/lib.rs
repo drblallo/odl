@@ -8,4 +8,5 @@ pub mod expression;
 pub mod lexer;
 pub mod option;
 pub mod parser;
+pub mod serialization;
 pub mod token;
