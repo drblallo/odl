@@ -1,3 +1,4 @@
+use crate::alternative::*;
 use crate::constant::ConstantDeclaration;
 use crate::serialization::*;
 use crate::token::Span;
@@ -8,6 +9,7 @@ use std::fmt::Formatter;
 pub enum OptionField {
     SubOption(OptionDeclaration),
     Const(ConstantDeclaration),
+    Alt(AlternativeDeclaration),
 }
 
 impl Serializable for OptionField {
@@ -19,6 +21,7 @@ impl Serializable for OptionField {
         return match self {
             OptionField::SubOption(c) => c.serialize(f, ctx),
             OptionField::Const(c) => c.serialize(f, ctx),
+            OptionField::Alt(c) => c.serialize(f, ctx),
         };
     }
 }

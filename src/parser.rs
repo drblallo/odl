@@ -1,3 +1,4 @@
+use crate::alternative::*;
 use crate::constant::*;
 use crate::declaration::*;
 use crate::error::ParserError;
@@ -22,6 +23,13 @@ macro_rules! accept {
             }
             false => false,
         }
+    };
+}
+
+#[macro_export]
+macro_rules! peek {
+    ($parser: expr, $pattern:pat) => {
+        $parser.peek().is_some() && matches!($parser.peek().unwrap().kind, $pattern)
     };
 }
 
@@ -287,7 +295,13 @@ impl<'a> Parser<'a> {
     pub fn option_declaration_body(&mut self) -> Result<OptionDeclaration, ParserError> {
         let start = self.current_span()?;
         let name = self.identifier()?;
-        expect!(self, TokenKind::Indent);
+
+        if !accept!(self, TokenKind::Indent) {
+            return Ok(OptionDeclaration::new(
+                name,
+                start.merge(&self.current_span()?),
+            ));
+        }
 
         let mut declarations = Vec::new();
         while !accept!(self, TokenKind::Deindent) {
@@ -307,14 +321,47 @@ impl<'a> Parser<'a> {
         return Ok(declaration);
     }
 
+    pub fn alternative_declaration_body(&mut self) -> Result<AlternativeDeclaration, ParserError> {
+        let start = self.current_span()?;
+        let name = self.identifier()?;
+
+        if !accept!(self, TokenKind::Indent) {
+            return Ok(AlternativeDeclaration::new(
+                name,
+                start.merge(&self.current_span()?),
+            ));
+        }
+
+        let mut declarations = Vec::new();
+        while !accept!(self, TokenKind::Deindent) {
+            declarations.push(self.option_declaration_body()?);
+        }
+
+        let mut decl = AlternativeDeclaration::new(name, start.merge(&self.current_span()?));
+        *decl.get_fields_mut() = declarations;
+        return Ok(decl);
+    }
+
+    pub fn alternative_declaration(&mut self) -> Result<AlternativeDeclaration, ParserError> {
+        let start = self.current_span()?;
+        expect!(self, TokenKind::Alt);
+        let mut declaration = self.alternative_declaration_body()?;
+        declaration.set_span(start.merge(&self.current_span()?));
+        return Ok(declaration);
+    }
+
     pub fn declaration(&mut self) -> Result<Declaration, ParserError> {
-        if self.peek().map_or(false, |x| x.kind == TokenKind::Const) {
+        if peek!(self, TokenKind::Const) {
             let decl = self.constant_declaration()?;
             return Ok(Declaration::Const(decl));
         }
-        if self.peek().map_or(false, |x| x.kind == TokenKind::Opt) {
+        if peek!(self, TokenKind::Opt) {
             let decl = self.option_declaration()?;
             return Ok(Declaration::Opt(decl));
+        }
+        if peek!(self, TokenKind::Alt) {
+            let decl = self.alternative_declaration()?;
+            return Ok(Declaration::Alt(decl));
         }
         return Err(ParserError::new_unexpected_token(self.current()?));
     }
@@ -471,5 +518,14 @@ mod tests {
         assert_eq!(declaration.name(), "asd");
         let field = declaration.get_field(0);
         assert_eq!(field.unwrap().name(), "rasd");
+    }
+
+    #[test]
+    fn empty_alternative_declaration() {
+        let mut parser = Parser::new("alt asd").unwrap();
+        let maybe_declaration = parser.alternative_declaration();
+        assert!(maybe_declaration.is_ok());
+        let declaration = maybe_declaration.unwrap();
+        assert_eq!(declaration.name(), "asd");
     }
 }

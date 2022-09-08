@@ -22,6 +22,7 @@ pub enum TokenKind {
     RParen,
     Semi,
 
+    Alt,
     Const,
     Opt,
 

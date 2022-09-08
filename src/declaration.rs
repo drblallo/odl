@@ -1,3 +1,4 @@
+use crate::alternative::*;
 use crate::constant::*;
 use crate::option::*;
 use crate::serialization::*;
@@ -7,6 +8,7 @@ use std::fmt::Display;
 pub enum Declaration {
     Opt(OptionDeclaration),
     Const(ConstantDeclaration),
+    Alt(AlternativeDeclaration),
 }
 
 impl Serializable for Declaration {
@@ -18,6 +20,7 @@ impl Serializable for Declaration {
         return match self {
             Declaration::Opt(dec) => dec.serialize(f, ctx),
             Declaration::Const(dec) => dec.serialize(f, ctx),
+            Declaration::Alt(dec) => dec.serialize(f, ctx),
         };
     }
 }

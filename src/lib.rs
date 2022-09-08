@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene)]
 extern crate plex;
 
+pub mod alternative;
 pub mod constant;
 pub mod declaration;
 pub mod error;

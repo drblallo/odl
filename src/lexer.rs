@@ -12,6 +12,8 @@ lexer! {
 
     r#"const"# => TokenKind::Const,
     r#"opt"# => TokenKind::Opt,
+    r#"alt"# => TokenKind::Alt,
+
     r#"or"# => TokenKind::Or,
     r#"and"# => TokenKind::And,
     r#"=="# => TokenKind::Equals,
