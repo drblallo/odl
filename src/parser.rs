@@ -1,4 +1,5 @@
 use crate::alternative::*;
+use crate::choice::*;
 use crate::constant::*;
 use crate::declaration::*;
 use crate::error::ParserError;
@@ -348,6 +349,28 @@ impl<'a> Parser<'a> {
         let mut declaration = self.alternative_declaration_body()?;
         declaration.set_span(start.merge(&self.current_span()?));
         return Ok(declaration);
+    }
+
+    pub fn choise_declaration(&mut self) -> Result<ChoiseDeclaration, ParserError> {
+        let start = self.current_span()?;
+        expect!(self, TokenKind::Ident(_));
+        let symbol = self.identifier()?;
+        let exp = if accept!(self, TokenKind::Assign) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        let mut decl = ChoiseDeclaration::new(symbol, exp, start.merge(&self.current_span()?));
+        if !accept!(self, TokenKind::Indent) {
+            return Ok(decl);
+        }
+        let mut fields = Vec::new();
+        while !accept!(self, TokenKind::Deindent) {
+            fields.push(self.choise_declaration()?);
+        }
+        *decl.get_fields_mut() = fields;
+        decl.set_span(start.merge(&self.current_span()?));
+        return Ok(decl);
     }
 
     pub fn declaration(&mut self) -> Result<Declaration, ParserError> {
