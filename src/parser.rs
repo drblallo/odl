@@ -2,6 +2,7 @@ use crate::alternative::*;
 use crate::choice::*;
 use crate::constant::*;
 use crate::declaration::*;
+use crate::document::*;
 use crate::error::ParserError;
 use crate::expression::*;
 use crate::lexer::IndentLexer;
@@ -388,6 +389,21 @@ impl<'a> Parser<'a> {
         }
         return Err(ParserError::new_unexpected_token(self.current()?));
     }
+
+    pub fn document(&mut self) -> Result<Document, ParserError> {
+        let mut document = Document::new();
+
+        while self.current_token.is_some() {
+            document.entries.push(self.declaration()?);
+        }
+
+        return Ok(document);
+    }
+
+    pub fn parse(s: &String) -> Result<Document, ParserError> {
+        let mut parser = Parser::new(&s)?;
+        return parser.document();
+    }
 }
 
 #[cfg(test)]
@@ -550,5 +566,12 @@ mod tests {
         assert!(maybe_declaration.is_ok());
         let declaration = maybe_declaration.unwrap();
         assert_eq!(declaration.name(), "asd");
+    }
+
+    #[test]
+    fn document_test() {
+        let mut parser = Parser::new("alt asd").unwrap();
+        let document = parser.document();
+        assert!(document.is_ok());
     }
 }

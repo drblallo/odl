@@ -1,5 +1,7 @@
+use crate::error::*;
 use crate::expression::*;
 use crate::serialization::*;
+use crate::symbol_table::*;
 use crate::token::Span;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -27,6 +29,7 @@ impl Serializable for ChoiseDeclaration {
         for field in &self.fields {
             field.serialize(f, &ctx.indented())?;
         }
+        write!(f, "\n")?;
         return Ok(());
     }
 }
@@ -82,5 +85,9 @@ impl ChoiseDeclaration {
 
     pub fn get_field_mut(&mut self, i: usize) -> Option<&mut ChoiseDeclaration> {
         return self.get_fields_mut().get_mut(i);
+    }
+
+    pub fn type_check(&self, table: &SymbolTable) -> Result<(), ParserError> {
+        Ok(())
     }
 }

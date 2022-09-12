@@ -1,5 +1,7 @@
+use crate::error::*;
 use crate::expression::*;
 use crate::serialization::*;
+use crate::symbol_table::*;
 use crate::token::Span;
 use std::fmt::Display;
 
@@ -15,10 +17,10 @@ impl Serializable for ConstantBody {
         f: &mut std::fmt::Formatter,
         ctx: &SerializationContext,
     ) -> Result<(), ::std::fmt::Error> {
-        return match self {
+        match self {
             ConstantBody::Direct(e) => {
                 write!(f, " = ")?;
-                e.serialize(f, ctx)
+                e.serialize(f, ctx)?;
             }
             ConstantBody::Content(vec) => {
                 write!(f, "\n")?;
@@ -26,9 +28,10 @@ impl Serializable for ConstantBody {
                 for entry in vec {
                     entry.serialize(f, &ctx.indented())?;
                 }
-                Ok(())
             }
         };
+        write!(f, "\n")?;
+        Ok(())
     }
 }
 
@@ -102,6 +105,10 @@ impl ConstantDeclaration {
 
     pub fn get_field_mut(&mut self, i: usize) -> Option<&mut ConstantDeclaration> {
         return self.get_fields_mut().and_then(|x| x.get_mut(i));
+    }
+
+    pub fn type_check(&self, table: &SymbolTable) -> Result<(), ParserError> {
+        Ok(())
     }
 }
 

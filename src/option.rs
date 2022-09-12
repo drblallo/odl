@@ -1,6 +1,8 @@
 use crate::alternative::*;
 use crate::constant::ConstantDeclaration;
+use crate::error::*;
 use crate::serialization::*;
+use crate::symbol_table::*;
 use crate::token::Span;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -56,6 +58,8 @@ impl Serializable for OptionDeclaration {
             decl.serialize(f, &ctx.indented().emitting_option())?;
         }
 
+        write!(f, "\n")?;
+
         return Ok(());
     }
 }
@@ -94,5 +98,9 @@ impl OptionDeclaration {
 
     pub fn get_field_mut(&mut self, i: usize) -> Option<&mut OptionField> {
         return self.get_fields_mut().get_mut(i);
+    }
+
+    pub fn type_check(&self, table: &SymbolTable) -> Result<(), ParserError> {
+        Ok(())
     }
 }
