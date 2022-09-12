@@ -38,7 +38,7 @@ impl Error for EndOfTokenStreamError {
 
 #[derive(Debug, Clone)]
 pub struct UnexpectedTokenError {
-    token: Token,
+    pub token: Token,
 }
 
 impl Display for UnexpectedTokenError {
