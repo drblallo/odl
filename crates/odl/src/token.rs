@@ -36,8 +36,8 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SourceLocation {
-    pub row: usize,
-    pub column: usize,
+    pub row: u32,
+    pub column: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
